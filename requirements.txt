@@ -1,3 +1,6 @@
 cupy
 stanza
 pandas
+spacy==3.7.4
+spacy[cuda12]
+torch
