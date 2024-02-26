@@ -7,7 +7,11 @@ from tqdm.auto import tqdm
 nlp = stanza.Pipeline(lang='id', processors='tokenize,mwt,pos,lemma,depparse')
 
 def create_conllu(path):
-
+    """
+    Create a CONLL-U file format given a text file(s).
+    path : Path to the .txt file(s)
+    """
+    
     files = os.listdir(path)
     for file in files:
         # Open the file to count the total number of lines
@@ -27,8 +31,13 @@ def create_conllu(path):
                     conllu_file.write('\n')
 
 
-def complete_deps(path):
+def write_conllu(path):
+    """
+    Complete the DEPS column then write CONLL-U file.
+    path : Path to the CONLL-U file
+    """
 
+    # Open CONLL-U file format the save it to Pandas DataFrame
     with open(path) as f:
         conllu = f.read()
         lines = [line for line in conllu.split('\n') if not line.startswith('#')]
@@ -37,9 +46,47 @@ def complete_deps(path):
         columns = ['ID', 'FORM', 'LEMMA', 'UPOS', 'XPOS', 'FEATS', 'HEAD', 'DEPREL', 'MISC', 'DEPS']
         df = pd.DataFrame(data, columns=columns)
 
+    # Complete the DEPS
     for i in tqdm(range(len(df)), desc="Complete the empty DEPS"):
         if (df['UPOS'][i+1] == 'PUNC') and ((i+1)!=len(df)):
             df['DEPS'][i] = f"SpaceAfter=No|MorphInd=^{df['LEMMA'][i]}<{df['XPOS'][i][0].lower()}>_{df['XPOS'][i]}$"
         else:
             df['DEPS'][i] = f"MorphInd=^{df['LEMMA'][i]}<{df['XPOS'][i][0].lower()}>_{df['XPOS'][i]}$"
 
+    # Convert DataFrame to CoNLL-U format
+    conllu_lines = []
+    sent = []
+    full_sent = []
+    for index, row in tqdm(df.iterrows(), total=len(df)):
+        if index + 1 < len(df):
+            next_row = df.iloc[index + 1]
+            next_id = str(next_row['ID'])
+            if next_id != '1':
+                conllu_line = "\t".join([str(row['ID']), row['FORM'], row['LEMMA'], row['UPOS'], row['XPOS'], row['FEATS'],
+                                        str(row['HEAD']), row['DEPREL'], row['MISC'], row['DEPS']])
+                sent.append(conllu_line.split('\t')[1])
+                conllu_lines.append(conllu_line)
+            else:
+                full_sent.append(' '.join(sent))
+                sent = []
+        else:
+            conllu_line = "\t".join([str(row['ID']), row['FORM'], row['LEMMA'], row['UPOS'], row['XPOS'], row['FEATS'],
+                                    str(row['HEAD']), row['DEPREL'], row['MISC'], row['DEPS']])
+            sent.append(conllu_line.split('\t')[1])
+            conllu_lines.append(conllu_line)
+
+    # Write CONLL-U file
+    with open('conllu_final.connlu', 'w', encoding="utf-8") as f:
+        i = 0
+        for j, c in tqdm(enumerate(conllu_lines), total=len(conllu_lines)):
+            if c.split('\t')[0] == '1':
+                f.write(f"# text = {full_sent[i]}\n")
+                f.write(c)
+                i += 1
+            else:
+                f.write(c)
+                if j != (len(conllu_lines)-1):
+                    if (conllu_lines[j+1].split('\t')[0] == '1'):
+                        f.write('\n\n')
+                    else:
+                        f.write('\n')
