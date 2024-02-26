@@ -6,20 +6,20 @@ from tqdm.auto import tqdm
 
 nlp = stanza.Pipeline(lang='id', processors='tokenize,mwt,pos,lemma,depparse')
 
-def create_conllu(path):
+def create_conllu(path, output_filename):
     """
     Create a CONLL-U file format given a text file(s).
     path : Path to the .txt file(s)
     """
-    
+
     files = os.listdir(path)
     for file in files:
         # Open the file to count the total number of lines
-        with open(file, 'r') as text:
+        with open(f"{path}/{file}", 'r') as text:
             total_lines = sum(1 for line in text)
             
-        with open(file, 'r') as text, \
-            open('output.conllu', 'w', encoding='utf-8') as conllu_file:
+        with open(f"{path}/{file}", 'r') as text, \
+            open(f'{output_filename}.conllu', 'w', encoding='utf-8') as conllu_file:
 
             for line in tqdm(text, unit_scale=True, total=total_lines, desc="Create CONLL-U file"):
                 doc = nlp(line)
@@ -31,7 +31,7 @@ def create_conllu(path):
                     conllu_file.write('\n')
 
 
-def write_conllu(path):
+def write_conllu(path, output_filename):
     """
     Complete the DEPS column then write CONLL-U file.
     path : Path to the CONLL-U file
@@ -57,7 +57,7 @@ def write_conllu(path):
     conllu_lines = []
     sent = []
     full_sent = []
-    for index, row in tqdm(df.iterrows(), total=len(df)):
+    for index, row in tqdm(df.iterrows(), total=len(df), desc='Converting DataFrame to CONLL-U format'):
         if index + 1 < len(df):
             next_row = df.iloc[index + 1]
             next_id = str(next_row['ID'])
@@ -76,9 +76,9 @@ def write_conllu(path):
             conllu_lines.append(conllu_line)
 
     # Write CONLL-U file
-    with open('conllu_final.connlu', 'w', encoding="utf-8") as f:
+    with open(f'{output_filename}_final.connlu', 'w', encoding="utf-8") as f:
         i = 0
-        for j, c in tqdm(enumerate(conllu_lines), total=len(conllu_lines)):
+        for j, c in tqdm(enumerate(conllu_lines), total=len(conllu_lines), desc='Write CONLL-U file format'):
             if c.split('\t')[0] == '1':
                 f.write(f"# text = {full_sent[i]}\n")
                 f.write(c)
@@ -90,3 +90,20 @@ def write_conllu(path):
                         f.write('\n\n')
                     else:
                         f.write('\n')
+
+
+if __name__ == '__main__':
+    
+    import argparse
+    parser = argparse.ArgumentParser(description="Preprocessing CONLL-U file format")
+    parser.add_argument("--txt_filepath", type=str, help="Path of .txt file")
+    parser.add_argument("--conllu_filepath", type=str, help="Path of .conllu file", default='./')
+    parser.add_argument("--output_filename", type=str, help="Output filename")
+    args = parser.parse_args()
+
+    text_filepath = args.txt_filepath
+    conllu_filepath = args.conllu_filepath
+    output_filename = args.output_filename
+
+    create_conllu(path=text_filepath, output_filename=output_filename)
+    write_conllu(path=conllu_filepath, output_filename=output_filename)
