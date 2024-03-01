@@ -25,8 +25,9 @@ def conllu_splitter(input_file, lines_per_chunk):
         chunks.append(current_chunk)
 
     os.makedirs('./split', exist_ok=True)
+
     for i, chunk in enumerate(chunks):
-        output_file = f'./split{input_file}_chunk_{i + 1}.conllu'
+        output_file = os.path.join('./split', f'{os.path.basename(input_file)}_chunk_{i + 1}.conllu')
         with open(output_file, 'w', encoding='utf-8') as file:
             file.writelines(chunk)
 
