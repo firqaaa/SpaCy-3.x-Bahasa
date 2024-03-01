@@ -47,7 +47,7 @@ def write_conllu(path, output_filename):
         df = pd.DataFrame(data, columns=columns)
 
     # Complete the DEPS
-    for i in tqdm(range(len(df)), desc="Complete the empty DEPS"):
+    for i in tqdm(range(len(df) - 1), desc="Complete the empty DEPS"):
         if (df['UPOS'][i+1] == 'PUNC') and ((i+1)!=len(df)):
             df['DEPS'][i] = f"SpaceAfter=No|MorphInd=^{df['LEMMA'][i]}<{df['XPOS'][i][0].lower()}>_{df['XPOS'][i]}$"
         else:
@@ -105,5 +105,5 @@ if __name__ == '__main__':
     conllu_filepath = args.conllu_filepath
     output_filename = args.output_filename
 
-    create_conllu(path=text_filepath, output_filename=output_filename)
+    # create_conllu(path=text_filepath, output_filename=output_filename)
     write_conllu(path=conllu_filepath, output_filename=output_filename)
